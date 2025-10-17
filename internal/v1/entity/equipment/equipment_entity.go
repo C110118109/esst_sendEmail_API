@@ -1,16 +1,28 @@
 package equipment
 
 import (
+	"esst_sendEmail/internal/pkg/log"
 	"esst_sendEmail/internal/pkg/util"
 	model "esst_sendEmail/internal/v1/structure/equipments"
+	"fmt"
 	"time"
-	// "gorm.io/gorm"
 )
 
 // 批次建立設備
 func (e *entity) CreateBatch(input *model.BatchCreated) error {
+	// log.Info("CreateBatch called with ProjectID:", input.ProjectID)
+	// log.Info("Number of equipments:", len(input.Equipments))
+
+	// 驗證專案 ID
+	if input.ProjectID == "" {
+		log.Error("ProjectID is empty")
+		return fmt.Errorf("project ID is required")
+	}
+
 	// 將每個設備資料轉換為 Table 結構
 	var equipmentTables []*model.Table
+	// for i, eq := range input.Equipments {
+	// 	log.Info("Processing equipment", i, ":", eq.PartNumber)
 	for _, eq := range input.Equipments {
 		equipment := &model.Table{
 			EquipmentID: util.GenerateUUID(),
@@ -21,13 +33,22 @@ func (e *entity) CreateBatch(input *model.BatchCreated) error {
 			CreatedTime: time.Now(),
 		}
 		equipmentTables = append(equipmentTables, equipment)
+
+		// log.Info("Created equipment record:", equipment.EquipmentID)
 	}
 
 	// 使用批次建立
 	if len(equipmentTables) > 0 {
+		// log.Info("Inserting", len(equipmentTables), "equipments into database")
+
 		if err := e.db.Create(&equipmentTables).Error; err != nil {
+			log.Error("Failed to insert equipments:", err)
 			return err
 		}
+
+		// log.Info("Successfully inserted all equipments")
+	} else {
+		// log.Info("No equipments to insert")
 	}
 
 	return nil
@@ -37,6 +58,11 @@ func (e *entity) CreateBatch(input *model.BatchCreated) error {
 func (e *entity) ListByProjectID(projectID string) ([]*model.Table, error) {
 	var equipments []*model.Table
 	err := e.db.Where("p_id = ?", projectID).Find(&equipments).Error
+	if err != nil {
+		log.Error("Failed to query equipments by project ID:", err)
+		return nil, err
+	}
+	// log.Info("Found", len(equipments), "equipments for project", projectID)
 	return equipments, err
 }
 
