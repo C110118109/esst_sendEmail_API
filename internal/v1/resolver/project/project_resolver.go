@@ -53,16 +53,13 @@ func (r *resolver) List(input *model.Fields) interface{} {
 }
 
 func (r *resolver) GetByID(input *model.Field) interface{} {
-	//input.IsDeleted = util.PointerBool(false)
 	base, err := r.ProjectService.GetByID(input)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -71,7 +68,6 @@ func (r *resolver) GetByID(input *model.Field) interface{} {
 	err = json.Unmarshal(projectsByte, &frontProject)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -79,24 +75,35 @@ func (r *resolver) GetByID(input *model.Field) interface{} {
 }
 
 func (r *resolver) Update(input *model.Updated) interface{} {
-	// department, err := r.DepartmentService.GetByID(&departmentModel.Field{DepartmentID: input.DepartmentID,
-	// 	IsDeleted: util.PointerBool(false)})
+	// 驗證專案是否存在
 	project, err := r.ProjectService.GetByID(&model.Field{ProjectID: input.ProjectID})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
+	// 如果有第二階段欄位更新，自動將狀態改為 step2
+	if input.ExpectedDeliveryPeriod != "" ||
+		input.ExpectedDeliveryDate != "" ||
+		input.ExpectedContractPeriod != "" ||
+		input.ContractStartDate != "" ||
+		input.ContractEndDate != "" ||
+		input.DeliveryAddress != "" ||
+		input.SpecialRequirements != "" {
+		// 如果狀態還是 step1，則更新為 step2
+		if project.Status == "step1" && input.Status == "" {
+			input.Status = "step2"
+		}
+	}
+
+	// 執行更新
 	err = r.ProjectService.Update(input)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -104,24 +111,20 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 }
 
 func (r *resolver) Delete(input *model.Updated) interface{} {
-	// _, err := r.DepartmentService.GetByID(&departmentModel.Field{DepartmentID: input.DepartmentID,
-	// 	IsDeleted: util.PointerBool(false)})
+	// 驗證專案是否存在
 	_, err := r.ProjectService.GetByID(&model.Field{ProjectID: input.ProjectID})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
 	err = r.ProjectService.Delete(input)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 

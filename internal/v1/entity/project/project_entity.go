@@ -14,11 +14,26 @@ func (e *entity) List(input *model.Fields) (int64, []*model.Table, error) {
 
 	db := e.db.Model(&model.Table{})
 
+	// 第一階段欄位篩選
 	if input.ProjectName != nil {
 		db = db.Where("p_name LIKE ?", "%"+*input.ProjectName+"%")
 	}
 	if input.ContactName != nil {
 		db = db.Where("contact_name LIKE ?", "%"+*input.ContactName+"%")
+	}
+	if input.ContactPhone != nil {
+		db = db.Where("contact_phone LIKE ?", "%"+*input.ContactPhone+"%")
+	}
+	if input.ContactEmail != nil {
+		db = db.Where("contact_email LIKE ?", "%"+*input.ContactEmail+"%")
+	}
+	if input.Owner != nil {
+		db = db.Where("owner LIKE ?", "%"+*input.Owner+"%")
+	}
+
+	// 專案狀態篩選
+	if input.Status != nil {
+		db = db.Where("status = ?", *input.Status)
 	}
 
 	err := db.Count(&total).Error
@@ -26,7 +41,9 @@ func (e *entity) List(input *model.Fields) (int64, []*model.Table, error) {
 		return 0, nil, err
 	}
 
-	err = db.Offset(int((input.Page - 1) * input.Limit)).
+	// 按更新時間降序排列，若無更新時間則按創建時間降序
+	err = db.Order("COALESCE(updated_time, created_time) DESC").
+		Offset(int((input.Page - 1) * input.Limit)).
 		Limit(int(input.Limit)).
 		Find(&records).Error
 
@@ -42,7 +59,9 @@ func (e *entity) GetByID(input *model.Field) (output *model.Table, err error) {
 }
 
 func (e *entity) Update(input *model.Table) (err error) {
-	err = e.db.Model(&model.Table{}).Save(&input).Error
+	// 使用 Save 會更新所有欄位（包括零值）
+	// 如果只想更新非零值欄位，可以使用 Updates
+	err = e.db.Model(&model.Table{}).Where("p_id = ?", input.ProjectID).Updates(input).Error
 
 	return err
 }

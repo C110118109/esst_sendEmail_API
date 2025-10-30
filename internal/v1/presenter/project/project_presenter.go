@@ -41,31 +41,25 @@ func (p *presenter) List(ctx *gin.Context) {
 }
 
 func (p *presenter) GetByID(ctx *gin.Context) {
-	projectID := ctx.Param("projectID")
+	// 修正：URL 參數名稱改為 projectId（與 router 定義一致）
+	projectId := ctx.Param("projectId")
 	input := &projects.Field{}
-	input.ProjectID = projectID
-	if err := ctx.ShouldBindJSON(input); err != nil {
-		log.Error(err)
-		ctx.JSON(http.StatusOK, code.GetCodeMessage(code.FormatError, err.Error()))
+	input.ProjectID = projectId
 
-		return
-	}
-
+	// GetByID 不需要從 body 取得資料，直接使用 URL 參數
 	codeMessage := p.ProjectResolver.GetByID(input)
 	ctx.JSON(http.StatusOK, codeMessage)
 }
 
 func (p *presenter) Update(ctx *gin.Context) {
-	// Todo 將UUID改成登入的使用者
-	//updatedBy := util.GenerateUUID()
-	projectID := ctx.Param("projectID")
+	// 修正：URL 參數名稱改為 projectId（與 router 定義一致）
+	projectId := ctx.Param("projectId")
 	input := &projects.Updated{}
-	input.ProjectID = projectID
-	//input.UpdatedBy = util.PointerString(updatedBy)
+	input.ProjectID = projectId
+
 	if err := ctx.ShouldBindJSON(input); err != nil {
 		log.Error(err)
-		ctx.JSON(http.StatusOK, code.GetCodeMessage(code.FormatError, err.Error()))
-
+		ctx.JSON(http.StatusBadRequest, code.GetCodeMessage(code.FormatError, err.Error()))
 		return
 	}
 
@@ -74,19 +68,12 @@ func (p *presenter) Update(ctx *gin.Context) {
 }
 
 func (p *presenter) Delete(ctx *gin.Context) {
-	// Todo 將UUID改成登入的使用者
-	//updatedBy := util.GenerateUUID()
-	projectID := ctx.Param("projectID")
+	// 修正：URL 參數名稱改為 projectId（與 router 定義一致）
+	projectId := ctx.Param("projectId")
 	input := &projects.Updated{}
-	input.ProjectID = projectID
-	//input.UpdatedBy = util.PointerString(updatedBy)
-	if err := ctx.ShouldBindJSON(input); err != nil {
-		log.Error(err)
-		ctx.JSON(http.StatusOK, code.GetCodeMessage(code.FormatError, err.Error()))
+	input.ProjectID = projectId
 
-		return
-	}
-
+	// Delete 操作不需要從 body 取得額外資料
 	codeMessage := p.ProjectResolver.Delete(input)
 	ctx.JSON(http.StatusOK, codeMessage)
 }
