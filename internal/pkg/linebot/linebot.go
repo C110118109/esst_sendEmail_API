@@ -105,7 +105,7 @@ func (s *lineBotService) buildStep1Message(data *ProjectStep1Data) string {
 	msg.WriteString(fmt.Sprintf("• 專案編號: %s\n", data.ProjectID))
 	msg.WriteString(fmt.Sprintf("• 專案名稱: %s\n", data.ProjectName))
 	msg.WriteString(fmt.Sprintf("• 建立時間: %s\n", data.CreatedTime.Format("2006-01-02 15:04:05")))
-	msg.WriteString(fmt.Sprintf("• 目前狀態: 第一階段\n\n"))
+	msg.WriteString(fmt.Sprintf("• 專案報備: 第一階段\n\n"))
 
 	// 聯絡人資訊
 	msg.WriteString("👤 聯絡人資訊\n")
@@ -155,7 +155,7 @@ func (s *lineBotService) buildStep2Message(data *ProjectStep2Data) string {
 	msg.WriteString(fmt.Sprintf("• 專案名稱: %s\n", data.ProjectName))
 	msg.WriteString(fmt.Sprintf("• 聯絡人: %s\n", data.ContactName))
 	msg.WriteString(fmt.Sprintf("• 更新時間: %s\n", data.UpdatedTime.Format("2006-01-02 15:04:05")))
-	msg.WriteString(fmt.Sprintf("• 目前狀態: 第二階段完成\n\n"))
+	msg.WriteString(fmt.Sprintf("• 專案報備: 第二階段完成\n\n"))
 
 	// 交貨資訊
 	msg.WriteString("📦 交貨資訊\n")
