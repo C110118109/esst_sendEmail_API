@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"esst_sendEmail/internal/pkg/code"
+	"esst_sendEmail/internal/pkg/linebot"
 	"esst_sendEmail/internal/pkg/log"
-	"esst_sendEmail/internal/pkg/mail"
 	"esst_sendEmail/internal/pkg/util"
 	model "esst_sendEmail/internal/v1/structure/projects"
 
@@ -24,7 +24,7 @@ func (r *resolver) Create(trx *gorm.DB, input *model.Created) interface{} {
 
 	trx.Commit()
 
-	// 注意: 第一階段郵件將在設備建立完成後發送
+	// 注意: 第一階段 LINE 通知將在設備建立完成後發送
 	// 見 equipment/equipment_resolver.go 的 CreateBatch 函數
 
 	return code.GetCodeMessage(code.Successful, project.ProjectID)
@@ -114,20 +114,20 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
-	// 如果是第二階段更新,發送 Email 通知
+	// 如果是第二階段更新,發送 LINE 通知
 	if isStep2Update {
 		go func() {
 			// 查詢設備清單
 			equipments, err := r.EquipmentService.ListByProjectID(input.ProjectID)
 			if err != nil {
-				log.Error("Failed to query equipments for step2 email:", err)
+				log.Error("Failed to query equipments for step2 LINE notification:", err)
 			}
 
 			// 轉換設備資料格式
-			emailEquipments := make([]mail.Equipment, 0)
+			lineEquipments := make([]linebot.Equipment, 0)
 			if equipments != nil {
 				for _, eq := range equipments {
-					emailEquipments = append(emailEquipments, mail.Equipment{
+					lineEquipments = append(lineEquipments, linebot.Equipment{
 						PartNumber:  eq.PartNumber,
 						Quantity:    eq.Quantity,
 						Description: eq.Description,
@@ -135,7 +135,7 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 				}
 			}
 
-			log.Info("Found", len(emailEquipments), "equipments for step2 email, project:", input.ProjectID)
+			log.Info("Found", len(lineEquipments), "equipments for step2 LINE notification, project:", input.ProjectID)
 
 			// 格式化日期
 			formatDate := func(dateStr string) string {
@@ -145,7 +145,7 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 				return dateStr
 			}
 
-			emailData := &mail.ProjectStep2Data{
+			notificationData := &linebot.ProjectStep2Data{
 				ProjectID:              input.ProjectID,
 				ProjectName:            project.ProjectName,
 				ContactName:            project.ContactName,
@@ -156,15 +156,15 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 				ContractEndDate:        formatDate(input.ContractEndDate),
 				DeliveryAddress:        input.DeliveryAddress,
 				SpecialRequirements:    input.SpecialRequirements,
-				Equipments:             emailEquipments, // 加入設備清單
+				Equipments:             lineEquipments,
 				UpdatedTime:            util.NowToUTC(),
 			}
 
-			emailService := mail.New()
-			if err := emailService.SendProjectStep2Email(emailData); err != nil {
-				log.Error("Failed to send step2 email notification:", err)
+			lineBotService := linebot.New()
+			if err := lineBotService.SendProjectStep2Notification(notificationData); err != nil {
+				log.Error("Failed to send step2 LINE notification:", err)
 			} else {
-				log.Info("Step2 email notification sent successfully for project:", input.ProjectID)
+				log.Info("Step2 LINE notification sent successfully for project:", input.ProjectID)
 			}
 		}()
 	}

@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"esst_sendEmail/internal/pkg/code"
+	"esst_sendEmail/internal/pkg/linebot"
 	"esst_sendEmail/internal/pkg/log"
-	"esst_sendEmail/internal/pkg/mail"
 	"esst_sendEmail/internal/pkg/util"
 	model "esst_sendEmail/internal/v1/structure/equipments"
 
@@ -37,36 +37,36 @@ func (r *resolver) CreateBatch(trx *gorm.DB, input *model.BatchCreated) interfac
 
 	trx.Commit()
 
-	// 設備建立完成後,發送第一階段郵件通知
-	go r.sendProjectStep1Email(input.ProjectID)
+	// 設備建立完成後,發送第一階段 LINE 通知
+	go r.sendProjectStep1LineNotification(input.ProjectID)
 
 	return code.GetCodeMessage(code.Successful, "Batch created successfully")
 }
 
-// sendProjectStep1Email 發送第一階段郵件
-func (r *resolver) sendProjectStep1Email(projectID string) {
-	log.Info("Preparing to send step1 email for project:", projectID)
+// sendProjectStep1LineNotification 發送第一階段 LINE 通知
+func (r *resolver) sendProjectStep1LineNotification(projectID string) {
+	log.Info("Preparing to send step1 LINE notification for project:", projectID)
 
 	// 查詢專案資訊
 	projectField := &Field{ProjectID: projectID}
 	project, err := r.ProjectService.GetByID(projectField.ToProjectField())
 	if err != nil {
-		log.Error("Failed to query project for email:", err)
+		log.Error("Failed to query project for LINE notification:", err)
 		return
 	}
 
 	// 查詢設備清單
 	equipments, err := r.EquipmentService.ListByProjectID(projectID)
 	if err != nil {
-		log.Error("Failed to query equipments for email:", err)
+		log.Error("Failed to query equipments for LINE notification:", err)
 		return
 	}
 
 	// 轉換設備資料格式
-	emailEquipments := make([]mail.Equipment, 0)
+	lineEquipments := make([]linebot.Equipment, 0)
 	if equipments != nil {
 		for _, eq := range equipments {
-			emailEquipments = append(emailEquipments, mail.Equipment{
+			lineEquipments = append(lineEquipments, linebot.Equipment{
 				PartNumber:  eq.PartNumber,
 				Quantity:    eq.Quantity,
 				Description: eq.Description,
@@ -74,9 +74,9 @@ func (r *resolver) sendProjectStep1Email(projectID string) {
 		}
 	}
 
-	log.Info("Found", len(emailEquipments), "equipments for project", projectID)
+	log.Info("Found", len(lineEquipments), "equipments for project", projectID)
 
-	emailData := &mail.ProjectStep1Data{
+	notificationData := &linebot.ProjectStep1Data{
 		ProjectID:    project.ProjectID,
 		ProjectName:  project.ProjectName,
 		ContactName:  project.ContactName,
@@ -84,15 +84,15 @@ func (r *resolver) sendProjectStep1Email(projectID string) {
 		ContactEmail: project.ContactEmail,
 		Owner:        project.Owner,
 		Remark:       project.Remark,
-		Equipments:   emailEquipments,
+		Equipments:   lineEquipments,
 		CreatedTime:  project.CreatedTime,
 	}
 
-	emailService := mail.New()
-	if err := emailService.SendProjectStep1Email(emailData); err != nil {
-		log.Error("Failed to send step1 email notification:", err)
+	lineBotService := linebot.New()
+	if err := lineBotService.SendProjectStep1Notification(notificationData); err != nil {
+		log.Error("Failed to send step1 LINE notification:", err)
 	} else {
-		log.Info("Step1 email notification sent successfully for project:", projectID)
+		log.Info("Step1 LINE notification sent successfully for project:", projectID)
 	}
 }
 
