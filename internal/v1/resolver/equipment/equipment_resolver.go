@@ -6,6 +6,7 @@ import (
 
 	"esst_sendEmail/internal/pkg/code"
 	"esst_sendEmail/internal/pkg/log"
+	"esst_sendEmail/internal/pkg/mail"
 	"esst_sendEmail/internal/pkg/util"
 	model "esst_sendEmail/internal/v1/structure/equipments"
 
@@ -35,7 +36,64 @@ func (r *resolver) CreateBatch(trx *gorm.DB, input *model.BatchCreated) interfac
 	}
 
 	trx.Commit()
+
+	// 設備建立完成後,發送第一階段郵件通知
+	go r.sendProjectStep1Email(input.ProjectID)
+
 	return code.GetCodeMessage(code.Successful, "Batch created successfully")
+}
+
+// sendProjectStep1Email 發送第一階段郵件
+func (r *resolver) sendProjectStep1Email(projectID string) {
+	log.Info("Preparing to send step1 email for project:", projectID)
+
+	// 查詢專案資訊
+	projectField := &Field{ProjectID: projectID}
+	project, err := r.ProjectService.GetByID(projectField.ToProjectField())
+	if err != nil {
+		log.Error("Failed to query project for email:", err)
+		return
+	}
+
+	// 查詢設備清單
+	equipments, err := r.EquipmentService.ListByProjectID(projectID)
+	if err != nil {
+		log.Error("Failed to query equipments for email:", err)
+		return
+	}
+
+	// 轉換設備資料格式
+	emailEquipments := make([]mail.Equipment, 0)
+	if equipments != nil {
+		for _, eq := range equipments {
+			emailEquipments = append(emailEquipments, mail.Equipment{
+				PartNumber:  eq.PartNumber,
+				Quantity:    eq.Quantity,
+				Description: eq.Description,
+			})
+		}
+	}
+
+	log.Info("Found", len(emailEquipments), "equipments for project", projectID)
+
+	emailData := &mail.ProjectStep1Data{
+		ProjectID:    project.ProjectID,
+		ProjectName:  project.ProjectName,
+		ContactName:  project.ContactName,
+		ContactPhone: project.ContactPhone,
+		ContactEmail: project.ContactEmail,
+		Owner:        project.Owner,
+		Remark:       project.Remark,
+		Equipments:   emailEquipments,
+		CreatedTime:  project.CreatedTime,
+	}
+
+	emailService := mail.New()
+	if err := emailService.SendProjectStep1Email(emailData); err != nil {
+		log.Error("Failed to send step1 email notification:", err)
+	} else {
+		log.Info("Step1 email notification sent successfully for project:", projectID)
+	}
 }
 
 func (r *resolver) List(input *model.Fields) interface{} {
@@ -79,12 +137,10 @@ func (r *resolver) GetByID(input *model.Field) interface{} {
 	base, err := r.EquipmentService.GetByID(input)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -93,7 +149,6 @@ func (r *resolver) GetByID(input *model.Field) interface{} {
 	err = json.Unmarshal(equipmentsByte, &frontEquipment)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -104,19 +159,16 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 	equipment, err := r.EquipmentService.GetByID(&model.Field{EquipmentID: input.EquipmentID})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
 	err = r.EquipmentService.Update(input)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
@@ -127,19 +179,16 @@ func (r *resolver) Delete(input *model.Updated) interface{} {
 	_, err := r.EquipmentService.GetByID(&model.Field{EquipmentID: input.EquipmentID})
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-
 			return code.GetCodeMessage(code.DoesNotExist, err)
 		}
 
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 
 	err = r.EquipmentService.Delete(input)
 	if err != nil {
 		log.Error(err)
-
 		return code.GetCodeMessage(code.InternalServerError, err)
 	}
 

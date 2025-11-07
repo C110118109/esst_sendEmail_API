@@ -52,6 +52,7 @@ type ProjectStep2Data struct {
 	ContractEndDate        string
 	DeliveryAddress        string
 	SpecialRequirements    string
+	Equipments             []Equipment // 設備清單
 	UpdatedTime            time.Time
 }
 
@@ -455,6 +456,25 @@ func (s *emailService) renderStep2Template(data *ProjectStep2Data) (string, erro
             margin: 0;
             padding: 10px 0;
         }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 12px; 
+            font-size: 14px; 
+        }
+        th, td { 
+            padding: 12px 10px; 
+            text-align: left; 
+            border-bottom: 1px solid #e8e8e8; 
+        }
+        th { 
+            background-color: #f8f9fa; 
+            font-weight: 600; 
+            color: #2c3e50; 
+        }
+        tbody tr:hover { 
+            background-color: #fafafa; 
+        }
     </style>
 </head>
 <body>
@@ -516,6 +536,30 @@ func (s *emailService) renderStep2Template(data *ProjectStep2Data) (string, erro
                 </div>
                 {{end}}
             </div>
+
+            {{if .Equipments}}
+            <div class="section">
+                <div class="section-title">設備清單</div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>料號</th>
+                            <th>數量</th>
+                            <th>說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{range .Equipments}}
+                        <tr>
+                            <td>{{.PartNumber}}</td>
+                            <td>{{.Quantity}}</td>
+                            <td>{{if .Description}}{{.Description}}{{else}}-{{end}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+            {{end}}
 
             {{if .DeliveryAddress}}
             <div class="section">

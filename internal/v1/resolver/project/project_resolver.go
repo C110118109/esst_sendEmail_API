@@ -24,27 +24,8 @@ func (r *resolver) Create(trx *gorm.DB, input *model.Created) interface{} {
 
 	trx.Commit()
 
-	// 發送第一階段 Email 通知
-	go func() {
-		emailData := &mail.ProjectStep1Data{
-			ProjectID:    project.ProjectID,
-			ProjectName:  project.ProjectName,
-			ContactName:  project.ContactName,
-			ContactPhone: project.ContactPhone,
-			ContactEmail: project.ContactEmail,
-			Owner:        project.Owner,
-			Remark:       project.Remark,
-			Equipments:   []mail.Equipment{}, // 先設為空,稍後會從設備列表取得
-			CreatedTime:  project.CreatedTime,
-		}
-
-		emailService := mail.New()
-		if err := emailService.SendProjectStep1Email(emailData); err != nil {
-			log.Error("Failed to send step1 email notification:", err)
-		} else {
-			log.Info("Step1 email notification sent successfully for project:", project.ProjectID)
-		}
-	}()
+	// 注意: 第一階段郵件將在設備建立完成後發送
+	// 見 equipment/equipment_resolver.go 的 CreateBatch 函數
 
 	return code.GetCodeMessage(code.Successful, project.ProjectID)
 }
@@ -136,6 +117,26 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 	// 如果是第二階段更新,發送 Email 通知
 	if isStep2Update {
 		go func() {
+			// 查詢設備清單
+			equipments, err := r.EquipmentService.ListByProjectID(input.ProjectID)
+			if err != nil {
+				log.Error("Failed to query equipments for step2 email:", err)
+			}
+
+			// 轉換設備資料格式
+			emailEquipments := make([]mail.Equipment, 0)
+			if equipments != nil {
+				for _, eq := range equipments {
+					emailEquipments = append(emailEquipments, mail.Equipment{
+						PartNumber:  eq.PartNumber,
+						Quantity:    eq.Quantity,
+						Description: eq.Description,
+					})
+				}
+			}
+
+			log.Info("Found", len(emailEquipments), "equipments for step2 email, project:", input.ProjectID)
+
 			// 格式化日期
 			formatDate := func(dateStr string) string {
 				if dateStr == "" {
@@ -155,6 +156,7 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 				ContractEndDate:        formatDate(input.ContractEndDate),
 				DeliveryAddress:        input.DeliveryAddress,
 				SpecialRequirements:    input.SpecialRequirements,
+				Equipments:             emailEquipments, // 加入設備清單
 				UpdatedTime:            util.NowToUTC(),
 			}
 
