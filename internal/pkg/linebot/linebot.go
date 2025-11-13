@@ -15,6 +15,7 @@ import (
 type LineBotService interface {
 	SendProjectStep1Notification(data *ProjectStep1Data) error
 	SendProjectStep2Notification(data *ProjectStep2Data) error
+	SendStockNotification(data *StockData) error
 }
 
 type lineBotService struct {
@@ -50,6 +51,26 @@ type ProjectStep2Data struct {
 	SpecialRequirements    string
 	Equipments             []Equipment
 	UpdatedTime            time.Time
+}
+
+// StockData 現貨報備資料
+type StockData struct {
+	StockID                string
+	StockName              string
+	ContactName            string
+	ContactPhone           string
+	ContactEmail           string
+	Owner                  string
+	ExpectedDeliveryPeriod string
+	ExpectedDeliveryDate   string
+	ExpectedContractPeriod string
+	ContractStartDate      string
+	ContractEndDate        string
+	DeliveryAddress        string
+	SpecialRequirements    string
+	Remark                 string
+	Equipments             []Equipment
+	CreatedTime            time.Time
 }
 
 // Equipment 設備資料
@@ -90,6 +111,12 @@ func (s *lineBotService) SendProjectStep1Notification(data *ProjectStep1Data) er
 // SendProjectStep2Notification 發送第二階段專案報備通知
 func (s *lineBotService) SendProjectStep2Notification(data *ProjectStep2Data) error {
 	message := s.buildStep2Message(data)
+	return s.sendMessage(message)
+}
+
+// SendStockNotification 發送現貨報備通知
+func (s *lineBotService) SendStockNotification(data *StockData) error {
+	message := s.buildStockMessage(data)
 	return s.sendMessage(message)
 }
 
@@ -197,6 +224,83 @@ func (s *lineBotService) buildStep2Message(data *ProjectStep2Data) string {
 	}
 
 	msg.WriteString("✨ 專案第二階段交貨資訊已完整填寫")
+
+	return msg.String()
+}
+
+// buildStockMessage 建立現貨報備訊息
+func (s *lineBotService) buildStockMessage(data *StockData) string {
+	var msg bytes.Buffer
+
+	msg.WriteString("📦 【現貨報備通知】\n")
+	msg.WriteString("━━━━━━━━━━━━━━━━━━━━\n\n")
+
+	// 基本資訊
+	msg.WriteString("📌 基本資訊\n")
+	msg.WriteString(fmt.Sprintf("• 現貨編號: %s\n", data.StockID))
+	msg.WriteString(fmt.Sprintf("• 項目名稱: %s\n", data.StockName))
+	msg.WriteString(fmt.Sprintf("• 建立時間: %s\n\n", data.CreatedTime.Format("2006-01-02 15:04:05")))
+
+	// 聯絡人資訊
+	msg.WriteString("👤 聯絡人資訊\n")
+	msg.WriteString(fmt.Sprintf("• 聯絡人: %s\n", data.ContactName))
+	if data.ContactPhone != "" {
+		msg.WriteString(fmt.Sprintf("• 電話: %s\n", data.ContactPhone))
+	}
+	if data.ContactEmail != "" {
+		msg.WriteString(fmt.Sprintf("• 信箱: %s\n", data.ContactEmail))
+	}
+	if data.Owner != "" {
+		msg.WriteString(fmt.Sprintf("• 雙欣負責人: %s\n", data.Owner))
+	}
+	msg.WriteString("\n")
+
+	// 交貨資訊
+	msg.WriteString("📦 交貨資訊\n")
+	msg.WriteString(fmt.Sprintf("• 預計交貨期: %s\n", data.ExpectedDeliveryPeriod))
+	msg.WriteString(fmt.Sprintf("• 預計交貨日: %s\n", formatDate(data.ExpectedDeliveryDate)))
+	msg.WriteString(fmt.Sprintf("• 預計履約期: %s\n", data.ExpectedContractPeriod))
+
+	if data.ContractStartDate != "" && data.ContractStartDate != "-" {
+		msg.WriteString(fmt.Sprintf("• 履約開始日: %s\n", formatDate(data.ContractStartDate)))
+	}
+	if data.ContractEndDate != "" && data.ContractEndDate != "-" {
+		msg.WriteString(fmt.Sprintf("• 履約結束日: %s\n", formatDate(data.ContractEndDate)))
+	}
+	msg.WriteString("\n")
+
+	// 設備清單
+	if len(data.Equipments) > 0 {
+		msg.WriteString("🔧 設備清單\n")
+		for i, eq := range data.Equipments {
+			msg.WriteString(fmt.Sprintf("%d. 料號: %s\n", i+1, eq.PartNumber))
+			msg.WriteString(fmt.Sprintf("   數量: %d\n", eq.Quantity))
+			if eq.Description != "" {
+				msg.WriteString(fmt.Sprintf("   說明: %s\n", eq.Description))
+			}
+		}
+		msg.WriteString("\n")
+	}
+
+	// 交貨地址
+	if data.DeliveryAddress != "" {
+		msg.WriteString("📍 交貨地址\n")
+		msg.WriteString(fmt.Sprintf("%s\n\n", data.DeliveryAddress))
+	}
+
+	// 特殊需求
+	if data.SpecialRequirements != "" {
+		msg.WriteString("⚡ 特殊需求\n")
+		msg.WriteString(fmt.Sprintf("%s\n\n", data.SpecialRequirements))
+	}
+
+	// 備註
+	if data.Remark != "" {
+		msg.WriteString("📝 備註\n")
+		msg.WriteString(fmt.Sprintf("%s\n\n", data.Remark))
+	}
+
+	msg.WriteString("✨ 現貨報備已完成，請盡快安排出貨")
 
 	return msg.String()
 }

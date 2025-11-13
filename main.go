@@ -8,6 +8,8 @@ import (
 
 	"esst_sendEmail/internal/v1/router/equipment"
 	"esst_sendEmail/internal/v1/router/project"
+	"esst_sendEmail/internal/v1/router/stock"
+	"esst_sendEmail/internal/v1/router/stock_equipment"
 
 	"esst_sendEmail/internal/v1/middleware"
 
@@ -46,6 +48,8 @@ func main() {
 	// 註冊路由
 	router = project.GetRoute(router, db)
 	router = equipment.GetRoute(router, db)
+	router = stock.GetRoute(router, db)
+	router = stock_equipment.GetRoute(router, db)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
