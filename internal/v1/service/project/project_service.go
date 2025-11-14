@@ -44,7 +44,7 @@ func (s *service) Create(input *model.Created) (*model.Base, error) {
 	}
 
 	output.ProjectID = util.GenerateUUID()
-	output.CreatedTime = util.NowToUTC()
+	output.CreatedTime = time.Now()
 	output.Status = "step1" // 初始狀態為第一階段
 
 	table := &model.Table{}

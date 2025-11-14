@@ -3,6 +3,7 @@ package project
 import (
 	"encoding/json"
 	"errors"
+	"time"
 
 	"esst_sendEmail/internal/pkg/code"
 	"esst_sendEmail/internal/pkg/linebot"
@@ -157,7 +158,7 @@ func (r *resolver) Update(input *model.Updated) interface{} {
 				DeliveryAddress:        input.DeliveryAddress,
 				SpecialRequirements:    input.SpecialRequirements,
 				Equipments:             lineEquipments,
-				UpdatedTime:            util.NowToUTC(),
+				UpdatedTime:            time.Now(),
 			}
 
 			lineBotService := linebot.New()

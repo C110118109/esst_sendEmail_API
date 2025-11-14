@@ -33,20 +33,25 @@ func parseDate(dateStr string) (*time.Time, error) {
 func (s *service) Create(input *model.Created) (*model.Base, error) {
 	var output model.Base
 
-	marshal, err := json.Marshal(input)
-	if err != nil {
-		return nil, err
-	}
+	// 手動複製基本資訊欄位
+	output.StockName = input.StockName
+	output.ContactName = input.ContactName
+	output.ContactPhone = input.ContactPhone
+	output.ContactEmail = input.ContactEmail
+	output.Owner = input.Owner
+	output.Remark = input.Remark
 
-	err = json.Unmarshal(marshal, &output)
-	if err != nil {
-		return nil, err
-	}
+	// 複製文字類型的交貨資訊
+	output.ExpectedDeliveryPeriod = input.ExpectedDeliveryPeriod
+	output.ExpectedContractPeriod = input.ExpectedContractPeriod
+	output.DeliveryAddress = input.DeliveryAddress
+	output.SpecialRequirements = input.SpecialRequirements
 
+	// 生成 UUID 和時間戳
 	output.StockID = util.GenerateUUID()
-	output.CreatedTime = util.NowToUTC()
+	output.CreatedTime = time.Now()
 
-	// 解析日期
+	// 解析日期欄位
 	if input.ExpectedDeliveryDate != "" {
 		if parsedDate, err := parseDate(input.ExpectedDeliveryDate); err == nil && parsedDate != nil {
 			output.ExpectedDeliveryDate = parsedDate
@@ -63,18 +68,27 @@ func (s *service) Create(input *model.Created) (*model.Base, error) {
 		}
 	}
 
-	table := &model.Table{}
-	marshal, err = json.Marshal(output)
-	if err != nil {
-		return nil, err
+	// 轉換為 Table 結構
+	table := &model.Table{
+		StockID:                output.StockID,
+		StockName:              output.StockName,
+		ContactName:            output.ContactName,
+		ContactPhone:           output.ContactPhone,
+		ContactEmail:           output.ContactEmail,
+		Owner:                  output.Owner,
+		ExpectedDeliveryPeriod: output.ExpectedDeliveryPeriod,
+		ExpectedDeliveryDate:   output.ExpectedDeliveryDate,
+		ExpectedContractPeriod: output.ExpectedContractPeriod,
+		ContractStartDate:      output.ContractStartDate,
+		ContractEndDate:        output.ContractEndDate,
+		DeliveryAddress:        output.DeliveryAddress,
+		SpecialRequirements:    output.SpecialRequirements,
+		Remark:                 output.Remark,
+		CreatedTime:            output.CreatedTime,
+		UpdatedTime:            output.UpdatedTime,
 	}
 
-	err = json.Unmarshal(marshal, table)
-	if err != nil {
-		return nil, err
-	}
-
-	err = s.Entity.Create(table)
+	err := s.Entity.Create(table)
 	if err != nil {
 		return nil, err
 	}
