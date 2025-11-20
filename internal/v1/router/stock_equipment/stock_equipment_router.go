@@ -11,6 +11,7 @@ import (
 func GetRoute(route *gin.Engine, db *gorm.DB) *gin.Engine {
 	controller := stock_equipment.New(db)
 	v10 := route.Group("authority").Group("v1.0").Group("stock-equipments")
+	v10.Use(middleware.JWTMiddleware()) // 加上 JWT 驗證
 	{
 		// 單筆建立現貨設備
 		v10.POST("", middleware.Transaction(db), controller.Create)
