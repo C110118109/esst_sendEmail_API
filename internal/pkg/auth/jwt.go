@@ -3,20 +3,26 @@ package auth
 import (
 	"errors"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// 從環境變數讀取密鑰，如果沒有則使用預設值
-var jwtKey = []byte(getJWTSecret())
+var (
+	jwtKey     []byte
+	jwtKeyOnce sync.Once
+)
 
-func getJWTSecret() string {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		return "your_secret_key_change_in_production"
-	}
-	return secret
+// 初始化 JWT 密鑰
+func initJWTKey() {
+	jwtKeyOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			panic("JWT_SECRET environment variable is required")
+		}
+		jwtKey = []byte(secret)
+	})
 }
 
 // Claims JWT 聲明結構
@@ -29,6 +35,8 @@ type Claims struct {
 
 // GenerateToken 生成 JWT token
 func GenerateToken(userID, username, role string) (string, error) {
+	initJWTKey() // 確保初始化
+
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	claims := &Claims{
@@ -50,6 +58,8 @@ func GenerateToken(userID, username, role string) (string, error) {
 
 // ValidateToken 驗證 JWT token
 func ValidateToken(tokenString string) (*Claims, error) {
+	initJWTKey() // 確保初始化
+
 	claims := &Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {

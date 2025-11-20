@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"esst_sendEmail/internal/v1/middleware"
 	"esst_sendEmail/internal/v1/router/equipment"
@@ -12,9 +13,12 @@ import (
 	"esst_sendEmail/internal/v1/router/stock"
 	"esst_sendEmail/internal/v1/router/stock_equipment"
 	"esst_sendEmail/internal/v1/router/user"
+	userModel "esst_sendEmail/internal/v1/structure/users"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -23,6 +27,14 @@ func main() {
 	// 載入環境變數
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using environment variables")
+	}
+
+	// 驗證必要的環境變數
+	requiredEnvs := []string{"DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME", "JWT_SECRET"}
+	for _, env := range requiredEnvs {
+		if os.Getenv(env) == "" {
+			log.Fatalf("❌ Required environment variable %s is not set", env)
+		}
 	}
 
 	// 資料庫連線設定
@@ -38,6 +50,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
+
+	// 檢查並建立預設管理員帳號
+	initDefaultAdmin(db)
 
 	// 初始化 Gin router
 	router := gin.New()
@@ -69,7 +84,38 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on port %s...", port)
-	log.Printf("預設管理員帳號: admin / 密碼: admin123")
+	log.Printf("✅ Server starting on port %s...", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))
+}
+
+// initDefaultAdmin 檢查並建立預設管理員帳號
+func initDefaultAdmin(db *gorm.DB) {
+	var count int64
+	db.Model(&userModel.Table{}).Where("role = ?", "admin").Count(&count)
+
+	if count == 0 {
+		// 生成密碼 hash
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte("admin123"), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal("Failed to hash default admin password:", err)
+		}
+
+		// 建立預設管理員
+		adminUser := &userModel.Table{
+			ID:        uuid.New().String(),
+			Username:  "admin",
+			Password:  string(hashedPassword),
+			Role:      "admin",
+			CreatedAt: time.Now(),
+		}
+
+		if err := db.Create(adminUser).Error; err != nil {
+			log.Fatal("Failed to create default admin user:", err)
+		}
+
+		log.Println("⚠️  預設管理員已建立")
+		log.Println("⚠️  帳號: admin")
+		log.Println("⚠️  密碼: admin123")
+		log.Println("⚠️  請立即登入並修改密碼!")
+	}
 }

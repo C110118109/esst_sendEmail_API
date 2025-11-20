@@ -21,13 +21,5 @@ COMMENT ON COLUMN users.role IS '角色 (admin/user)';
 COMMENT ON COLUMN users.created_at IS '建立時間';
 COMMENT ON COLUMN users.updated_at IS '更新時間';
 
--- 插入預設管理員帳號 (密碼: admin123)
--- bcrypt hash of "admin123"
-INSERT INTO users (id, username, password, role, created_at) 
-VALUES (
-    uuid_generate_v4(),
-    'admin',
-    '$2a$10$8K1p/a0dL3LzF7sW5KvN6u5PN5x9lNy0CQvWXJzJ8FvVwqV7aCdoi',
-    'admin',
-    now()
-);
+-- 預設管理員帳號將在應用程式首次啟動時自動建立
+-- 請在首次啟動後立即修改密碼

@@ -59,12 +59,6 @@ func (s *service) Authenticate(username, password string) (*model.Base, error) {
 		return nil, err
 	}
 
-	// 🔍 在比對前就印出來（非常重要）
-	fmt.Println("🔍 Username:", username)
-	fmt.Println("🔍 Input password:", password)
-	fmt.Println("🔍 Stored hash:", user.Password)
-	fmt.Println("🔍 Hash length:", len(user.Password))
-
 	// 驗證密碼
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
