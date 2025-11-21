@@ -19,7 +19,7 @@ func (s *service) Create(input *model.Created) (*model.Base, error) {
 		return nil, err
 	}
 
-	// 設定角色，預設為 user
+	// 設定角色,預設為 user
 	role := input.Role
 	if role == "" {
 		role = "user"
@@ -29,6 +29,7 @@ func (s *service) Create(input *model.Created) (*model.Base, error) {
 	table := &model.Table{
 		ID:        util.GenerateUUID(),
 		Username:  input.Username,
+		Email:     input.Email, // 新增 email
 		Password:  string(hashedPassword),
 		Role:      role,
 		CreatedAt: time.Now(),
@@ -44,6 +45,7 @@ func (s *service) Create(input *model.Created) (*model.Base, error) {
 	output := &model.Base{
 		ID:        table.ID,
 		Username:  table.Username,
+		Email:     table.Email, // 新增 email
 		Role:      table.Role,
 		CreatedAt: table.CreatedAt,
 	}
@@ -70,6 +72,7 @@ func (s *service) Authenticate(username, password string) (*model.Base, error) {
 	output := &model.Base{
 		ID:        user.ID,
 		Username:  user.Username,
+		Email:     user.Email,
 		Role:      user.Role,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
@@ -88,6 +91,7 @@ func (s *service) GetByID(input *model.Field) (*model.Base, error) {
 	output := &model.Base{
 		ID:        user.ID,
 		Username:  user.Username,
+		Email:     user.Email,
 		Role:      user.Role,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,
@@ -130,6 +134,9 @@ func (s *service) Update(input *model.Updated) error {
 	// 更新欄位
 	if input.Username != "" {
 		user.Username = input.Username
+	}
+	if input.Email != "" {
+		user.Email = input.Email
 	}
 	if input.Password != "" {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)

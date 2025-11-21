@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	model "esst_sendEmail/internal/v1/structure/users"
 )
 
@@ -30,6 +31,10 @@ func (e *entity) List(input *model.Fields) (int64, []*model.Table, error) {
 		db = db.Where("username LIKE ?", "%"+*input.Username+"%")
 	}
 
+	if input.Email != nil {
+		db = db.Where("email LIKE ?", "%"+*input.Email+"%")
+	}
+
 	err := db.Count(&total).Error
 	if err != nil {
 		return 0, nil, err
@@ -48,5 +53,18 @@ func (e *entity) Update(input *model.Table) error {
 }
 
 func (e *entity) Delete(input *model.Field) error {
+	//後端保護:先查詢使用者資料
+	var user model.Table
+	err := e.db.Where("id = ?", *input.ID).First(&user).Error
+	if err != nil {
+		return err
+	}
+
+	// 禁止刪除預設管理員帳號
+	if user.Username == "admin" {
+		return errors.New("無法刪除預設管理員帳號")
+	}
+
+	// 執行刪除
 	return e.db.Where("id = ?", *input.ID).Delete(&model.Table{}).Error
 }

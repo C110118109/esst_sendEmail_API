@@ -63,19 +63,19 @@ func main() {
 	router.Use(middleware.CORSMiddleware())
 
 	// 註冊路由
-	// 1. 用戶認證路由（包含公開的 login 和需要 JWT 的管理功能）
+	// 1. 用戶認證路由(包含公開的 login 和需要 JWT 的管理功能)
 	router = user.GetRoute(router, db)
 
-	// 2. 專案管理路由（需要 JWT 驗證）
+	// 2. 專案管理路由(需要 JWT 驗證)
 	router = project.GetRoute(router, db)
 
-	// 3. 設備管理路由（需要 JWT 驗證）
+	// 3. 設備管理路由(需要 JWT 驗證)
 	router = equipment.GetRoute(router, db)
 
-	// 4. 現貨管理路由（需要 JWT 驗證）
+	// 4. 現貨管理路由(需要 JWT 驗證)
 	router = stock.GetRoute(router, db)
 
-	// 5. 現貨設備管理路由（需要 JWT 驗證）
+	// 5. 現貨設備管理路由(需要 JWT 驗證)
 	router = stock_equipment.GetRoute(router, db)
 
 	// 啟動服務器
@@ -104,6 +104,7 @@ func initDefaultAdmin(db *gorm.DB) {
 		adminUser := &userModel.Table{
 			ID:        uuid.New().String(),
 			Username:  "admin",
+			Email:     "skes1114@gmail.com", // 預設管理員信箱
 			Password:  string(hashedPassword),
 			Role:      "admin",
 			CreatedAt: time.Now(),
@@ -116,6 +117,7 @@ func initDefaultAdmin(db *gorm.DB) {
 		log.Println("⚠️  預設管理員已建立")
 		log.Println("⚠️  帳號: admin")
 		log.Println("⚠️  密碼: admin123")
-		log.Println("⚠️  請立即登入並修改密碼!")
+		log.Println("⚠️  信箱: skes1114@gmail.com")
+		log.Println("⚠️  請立即登入並修改密碼與信箱!")
 	}
 }
