@@ -3,6 +3,7 @@ package user
 import (
 	"esst_sendEmail/internal/v1/middleware"
 	"esst_sendEmail/internal/v1/presenter/user"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -10,8 +11,10 @@ import (
 func GetRoute(route *gin.Engine, db *gorm.DB) *gin.Engine {
 	controller := user.New(db)
 
-	// 公開路由 - 登入
-	route.POST("/auth/login", controller.Login)
+	// 公開路由 - 登入相關
+	route.POST("/auth/request-code", controller.RequestVerificationCode) // 新增:請求驗證碼
+	route.POST("/auth/verify-login", controller.VerifyAndLogin)          // 新增:驗證碼登入
+	route.POST("/auth/login", controller.Login)                          // 保留原有的直接登入
 	route.POST("/auth/logout", controller.Logout)
 
 	// 需要身份驗證的路由

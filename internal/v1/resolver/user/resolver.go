@@ -3,11 +3,13 @@ package user
 import (
 	"esst_sendEmail/internal/v1/service/user"
 	model "esst_sendEmail/internal/v1/structure/users"
+
 	"gorm.io/gorm"
 )
 
 type Resolver interface {
 	Create(trx *gorm.DB, input *model.Created) interface{}
+	ValidateCredentials(username, password string) interface{} // 🔴 新增這行
 	Login(input *model.Login) interface{}
 	GetByID(input *model.Field) interface{}
 	List(input *model.Fields) interface{}

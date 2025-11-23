@@ -9,6 +9,7 @@ import (
 	"esst_sendEmail/internal/pkg/log"
 	"esst_sendEmail/internal/pkg/util"
 	model "esst_sendEmail/internal/v1/structure/users"
+
 	"gorm.io/gorm"
 )
 
@@ -23,6 +24,19 @@ func (r *resolver) Create(trx *gorm.DB, input *model.Created) interface{} {
 
 	trx.Commit()
 	return code.GetCodeMessage(code.Successful, user.ID)
+}
+
+// ValidateCredentials 驗證帳號密碼(不生成 token)
+func (r *resolver) ValidateCredentials(username, password string) interface{} {
+	// 驗證用戶
+	user, err := r.UserService.Authenticate(username, password)
+	if err != nil {
+		log.Error(err)
+		return code.GetCodeMessage(code.JWTRejected, "Invalid username or password")
+	}
+
+	// 返回用戶資料(不含 token)
+	return code.GetCodeMessage(code.Successful, user)
 }
 
 func (r *resolver) Login(input *model.Login) interface{} {
