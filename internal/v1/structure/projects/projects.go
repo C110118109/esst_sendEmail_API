@@ -138,7 +138,7 @@ type Created struct {
 	// 聯絡電話
 	ContactPhone string `json:"contact_phone" binding:"required" validate:"required"`
 	// 聯絡信箱
-	ContactEmail string `json:"contact_email" binding:"required,email" validate:"required,email"`
+	ContactEmail string `json:"contact_email" binding:"required,email" validate:"email"`
 	// 雙欣負責人
 	Owner string `json:"owner" binding:"required" validate:"required"`
 	// 備註
